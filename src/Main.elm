@@ -1,14 +1,28 @@
-module Main exposing (ActiveRealm(..), Model, Msg(..), Realm(..), Url, init, update, urlToRealm, view)
+module Main exposing (main)
 
 import Browser
 import Browser.Events
+import Browser.Navigation as Nav
+import Debug exposing (log)
 import Html exposing (Html, article, div, h1, h2, header, iframe, text)
 import Html.Attributes exposing (class, src, type_)
 import Html.Events exposing (onClick)
+import Url
 
 
-type alias Url =
-    String
+
+-- MAIN
+
+
+main =
+    Browser.application
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
+        , onUrlRequest = LinkClicked
+        , onUrlChange = UrlChanged
+        }
 
 
 
@@ -16,20 +30,24 @@ type alias Url =
 
 
 type Realm
-    = AppOne Url
-    | AppTwo Url
+    = AppOne String
+    | AppTwo String
 
 
-urlToRealm : Url -> Result String Realm
+urlToRealm : Url.Url -> Result String Realm
 urlToRealm url =
-    if String.startsWith "/app-one" url then
-        Ok (AppOne url)
+    let
+        str =
+            Url.toString url
+    in
+    if String.startsWith "http://localhost:8080/app-one" str then
+        Ok (AppOne str)
 
-    else if String.startsWith "/app-two" url then
-        Ok (AppTwo url)
+    else if String.startsWith "http://localhost:8080/app-two" str then
+        Ok (AppTwo str)
 
     else
-        Err ("Could not match URL '" ++ url ++ "' to any Realm")
+        Err ("Could not match URL '" ++ str ++ "' to any Realm")
 
 
 
@@ -44,24 +62,25 @@ type ActiveRealm
 
 type alias Model =
     { activeRealm : ActiveRealm
+    , navKey : Nav.Key
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd msg )
+init _ url navKey =
     let
-        url =
-            "/app-one"
-
         realm =
             urlToRealm url
+
+        foo =
+            log "url" (Url.toString url)
     in
     case realm of
         Ok r ->
-            ( { activeRealm = Success r }, Cmd.none )
+            ( { navKey = navKey, activeRealm = Success r }, Cmd.none )
 
         Err e ->
-            ( { activeRealm = Failure e }, Cmd.none )
+            ( { navKey = navKey, activeRealm = Failure e }, Cmd.none )
 
 
 
@@ -70,14 +89,16 @@ init _ =
 
 type Msg
     = NoOp
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     ( model, Cmd.none )
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
     let
         content =
@@ -96,10 +117,14 @@ view model =
                         AppTwo _ ->
                             iframe [ src "./app2/index.html" ] []
     in
-    div []
-        [ header [] [ h1 [] [ text "Main Header" ] ]
-        , article [] [ content ]
+    { title = "Yggdrasil"
+    , body =
+        [ div []
+            [ header [] [ h1 [] [ text "Main Header" ] ]
+            , article [] [ content ]
+            ]
         ]
+    }
 
 
 
@@ -109,17 +134,3 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
-
-
-
--- MAIN
-
-
-main : Program () Model Msg
-main =
-    Browser.element
-        { init = init
-        , view = view
-        , update = update
-        , subscriptions = subscriptions
-        }
