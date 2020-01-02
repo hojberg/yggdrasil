@@ -4,8 +4,8 @@ import Browser
 import Browser.Events
 import Browser.Navigation as Nav
 import Debug exposing (log)
-import Html exposing (Html, article, div, h1, h2, header, iframe, text)
-import Html.Attributes exposing (class, src, type_)
+import Html exposing (Html, a, article, div, h1, h2, header, nav, text)
+import Html.Attributes exposing (class, href, src, type_)
 import Html.Events exposing (onClick)
 import Url
 
@@ -30,8 +30,8 @@ main =
 
 
 type Realm
-    = AppOne String
-    | AppTwo String
+    = EmberApp String
+    | ReactApp String
 
 
 urlToRealm : Url.Url -> Result String Realm
@@ -40,11 +40,11 @@ urlToRealm url =
         str =
             Url.toString url
     in
-    if String.startsWith "http://localhost:8080/app-one" str then
-        Ok (AppOne str)
+    if String.startsWith "http://localhost:8080/ember-app" str then
+        Ok (EmberApp str)
 
-    else if String.startsWith "http://localhost:8080/app-two" str then
-        Ok (AppTwo str)
+    else if String.startsWith "http://localhost:8080/react-app" str then
+        Ok (ReactApp str)
 
     else
         Err ("Could not match URL '" ++ str ++ "' to any Realm")
@@ -111,16 +111,22 @@ view model =
 
                 Success realm ->
                     case realm of
-                        AppOne _ ->
-                            iframe [ src "./app1/index.html" ] []
+                        EmberApp _ ->
+                            Html.node "ember-app" [] []
 
-                        AppTwo _ ->
-                            iframe [ src "./app2/index.html" ] []
+                        ReactApp _ ->
+                            Html.node "react-app" [] []
     in
     { title = "Yggdrasil"
     , body =
         [ div []
-            [ header [] [ h1 [] [ text "Main Header" ] ]
+            [ header []
+                [ h1 [] [ text "Main Header" ]
+                , nav []
+                    [ a [ href "/ember-app" ] [ text "Ember App" ]
+                    , a [ href "/react-app" ] [ text "React App" ]
+                    ]
+                ]
             , article [] [ content ]
             ]
         ]
