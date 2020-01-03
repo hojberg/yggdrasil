@@ -3,8 +3,7 @@ module Main exposing (main)
 import Browser
 import Browser.Events
 import Browser.Navigation as Nav
-import Debug exposing (log)
-import Html exposing (Html, a, article, div, h1, h2, header, nav, text)
+import Html exposing (Html, a, article, div, h1, h2, header, nav, span, text)
 import Html.Attributes exposing (class, href, src, type_)
 import Html.Events exposing (onClick)
 import Url
@@ -50,6 +49,16 @@ urlToRealm url =
         Err ("Could not match URL '" ++ str ++ "' to any Realm")
 
 
+realmResultToActiveRealm : Result String Realm -> ActiveRealm
+realmResultToActiveRealm realm =
+    case realm of
+        Ok r ->
+            Success r
+
+        Err e ->
+            Failure e
+
+
 
 -- Model
 
@@ -70,17 +79,9 @@ init : () -> Url.Url -> Nav.Key -> ( Model, Cmd msg )
 init _ url navKey =
     let
         realm =
-            urlToRealm url
-
-        foo =
-            log "url" (Url.toString url)
+            url |> urlToRealm |> realmResultToActiveRealm
     in
-    case realm of
-        Ok r ->
-            ( { navKey = navKey, activeRealm = Success r }, Cmd.none )
-
-        Err e ->
-            ( { navKey = navKey, activeRealm = Failure e }, Cmd.none )
+    ( { navKey = navKey, activeRealm = realm }, Cmd.none )
 
 
 
@@ -95,7 +96,24 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.navKey url.path )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            let
+                realm =
+                    url |> urlToRealm |> realmResultToActiveRealm
+            in
+            ( { model | activeRealm = realm }, Cmd.none )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 view : Model -> Browser.Document Msg
@@ -124,6 +142,7 @@ view model =
                 [ h1 [] [ text "Main Header" ]
                 , nav []
                     [ a [ href "/ember-app" ] [ text "Ember App" ]
+                    , span [] [ text " | " ]
                     , a [ href "/react-app" ] [ text "React App" ]
                     ]
                 ]
