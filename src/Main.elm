@@ -4,7 +4,7 @@ import Browser
 import Browser.Events
 import Browser.Navigation as Nav
 import Html exposing (Html, a, article, div, h1, h2, header, nav, span, text)
-import Html.Attributes exposing (class, href, src, type_)
+import Html.Attributes exposing (attribute, class, href, src, type_)
 import Html.Events exposing (onClick)
 import Url
 
@@ -39,11 +39,17 @@ urlToRealm url =
         str =
             Url.toString url
     in
-    if String.startsWith "http://localhost:8080/ember-app" str then
-        Ok (EmberApp str)
+    if String.startsWith "/ember-app" url.path then
+        url.path
+            |> String.replace "ember-app" ""
+            |> EmberApp
+            |> Ok
 
-    else if String.startsWith "http://localhost:8080/react-app" str then
-        Ok (ReactApp str)
+    else if String.startsWith "/react-app" url.path then
+        url.path
+            |> String.replace "react-app" ""
+            |> ReactApp
+            |> Ok
 
     else
         Err ("Could not match URL '" ++ str ++ "' to any Realm")
@@ -129,11 +135,11 @@ view model =
 
                 Success realm ->
                     case realm of
-                        EmberApp _ ->
-                            Html.node "ember-app" [] []
+                        EmberApp path ->
+                            Html.node "ember-app" [ attribute "path" path ] []
 
-                        ReactApp _ ->
-                            Html.node "react-app" [] []
+                        ReactApp path ->
+                            Html.node "react-app" [ attribute "path" path ] []
     in
     { title = "Yggdrasil"
     , body =
@@ -144,6 +150,8 @@ view model =
                     [ a [ href "/ember-app" ] [ text "Ember App" ]
                     , span [] [ text " | " ]
                     , a [ href "/react-app" ] [ text "React App" ]
+                    , span [] [ text " | " ]
+                    , a [ href "/react-app/sub" ] [ text "React App / Sub" ]
                     ]
                 ]
             , article [] [ content ]
